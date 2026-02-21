@@ -1,0 +1,10 @@
+google-adk
+ag-ui-adk
+
+fastapi
+uvicorn[standard]
+
+python-dotenv
+httpx
+pydantic
+sse-starlette
