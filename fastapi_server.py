@@ -76,7 +76,10 @@ add_adk_fastapi_endpoint(app, adk_agent_haiku_generator, path="/haiku-generator"
 async def root():
     return {
         "message": "ADK Middleware is running with HITL support!",
-        "endpoints": ["/training-agent"],
+        "endpoints": ["/sample-agent", "/agentic-chat-agent", "/human-in-loop-agent", "/shared-state-agent", "/haiku-generator"],
         "hitl_enabled": True
     }
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
