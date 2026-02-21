@@ -10,6 +10,7 @@ interface StartStreamOptions {
   agentEndpoint: string;
   conversationHistory?: ConversationHistoryMessage[];
   threadId?: string;
+  onComplete?: (text: string, toolCalls: StreamToolCall[]) => void;
 }
 
 export function useADKStream() {
@@ -22,48 +23,25 @@ export function useADKStream() {
   const [error, setError] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const typewriterIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Typewriter effect - reveals text character by character
-  const startTypewriter = useCallback((fullText: string) => {
-    let charIndex = 0;
-    setDisplayedText('');
-    
-    if (typewriterIntervalRef.current) {
-      clearInterval(typewriterIntervalRef.current);
-    }
-
-    typewriterIntervalRef.current = setInterval(() => {
-      if (charIndex < fullText.length) {
-        setDisplayedText(fullText.slice(0, charIndex + 1));
-        charIndex++;
-      } else {
-        if (typewriterIntervalRef.current) {
-          clearInterval(typewriterIntervalRef.current);
-          typewriterIntervalRef.current = null;
-        }
-      }
-    }, 10); // 10ms per character for smooth typing
-  }, []);
+  const onCompleteRef = useRef<((text: string, toolCalls: StreamToolCall[]) => void) | null>(null);
 
   const cancelStream = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    if (typewriterIntervalRef.current) {
-      clearInterval(typewriterIntervalRef.current);
-      typewriterIntervalRef.current = null;
-    }
     setIsStreaming(false);
   }, []);
 
-  const startStream = useCallback(async ({ question, agentEndpoint, conversationHistory = [], threadId }: StartStreamOptions) => {
+  const startStream = useCallback(async ({ question, agentEndpoint, conversationHistory = [], threadId, onComplete }: StartStreamOptions) => {
     setIsStreaming(true);
     setStreamedText('');
     setDisplayedText('');
     setPhaseLabel('');
     setToolCalls([]);
     setError(null);
+
+    // Store onComplete callback
+    onCompleteRef.current = onComplete || null;
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -99,54 +77,64 @@ export function useADKStream() {
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
+        let currentEvent = '';
         for (const line of lines) {
-          if (!line.startsWith('event: ')) continue;
-          
-          const eventType = line.slice(7).trim();
-          const nextLineIdx = lines.indexOf(line) + 1;
-          if (nextLineIdx >= lines.length) continue;
-          
-          const dataLine = lines[nextLineIdx];
-          if (!dataLine.startsWith('data: ')) continue;
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith('data: ') && currentEvent) {
+            const dataStr = line.slice(6).trim();
+            if (!dataStr) continue;
 
-          const dataStr = dataLine.slice(6).trim();
-          if (!dataStr) continue;
+            try {
+              const data = JSON.parse(dataStr);
 
-          try {
-            const data = JSON.parse(dataStr);
+              switch (currentEvent) {
+                case 'phase':
+                  setCurrentPhase(data.phase);
+                  setPhaseLabel(data.label);
+                  break;
 
-            switch (eventType) {
-              case 'phase':
-                setCurrentPhase(data.phase);
-                setPhaseLabel(data.label);
-                break;
+                case 'token':
+                  accumulatedText += data.text;
+                  setStreamedText(accumulatedText);
+                  // Update typewriter instantly during streaming
+                  setDisplayedText(accumulatedText);
+                  break;
 
-              case 'token':
-                accumulatedText += data.text;
-                setStreamedText(accumulatedText);
-                // Update typewriter instantly during streaming
-                setDisplayedText(accumulatedText);
-                break;
+                case 'tool-call':
+                  setToolCalls(prev => [...prev, {
+                    toolCallId: data.toolCallId,
+                    toolName: data.toolName,
+                    args: data.args,
+                  }]);
+                  break;
 
-              case 'tool-call':
-                setToolCalls(prev => [...prev, {
-                  toolCallId: data.toolCallId,
-                  toolName: data.toolName,
-                  args: data.args,
-                }]);
-                break;
+                case 'tool-result':
+                  // Update the tool call with its result data
+                  setToolCalls(prev => prev.map(tc => 
+                    tc.toolCallId === data.toolCallId
+                      ? { ...tc, result: data.result }
+                      : tc
+                  ));
+                  break;
 
-              case 'error':
-                setError(data.message);
-                break;
+                case 'error':
+                  setError(data.message);
+                  break;
 
-              case 'done':
-                setIsStreaming(false);
-                setCurrentPhase('complete');
-                break;
+                case 'done':
+                  setIsStreaming(false);
+                  setCurrentPhase('complete');
+                  // Call onComplete callback with final data
+                  if (onCompleteRef.current) {
+                    onCompleteRef.current(accumulatedText, toolCalls);
+                  }
+                  break;
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
             }
-          } catch (e) {
-            console.error('Failed to parse SSE data:', e);
+            currentEvent = '';
           }
         }
       }
@@ -156,11 +144,8 @@ export function useADKStream() {
       }
     } finally {
       setIsStreaming(false);
-      if (typewriterIntervalRef.current) {
-        clearInterval(typewriterIntervalRef.current);
-      }
     }
-  }, [startTypewriter]);
+  }, []);
 
   return {
     isStreaming,

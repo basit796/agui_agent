@@ -59,26 +59,25 @@ export default function WeatherAgentPage() {
       content: msg.content,
     }));
 
-    // Start streaming
+    // Start streaming with onComplete callback to persist completed message
     stream.startStream({
       question,
       agentEndpoint: 'weather-agent',
       conversationHistory,
       threadId,
-    }).then(() => {
-      // After stream completes, add assistant message to history
-      if (stream.streamedText) {
+      onComplete: (text, toolCalls) => {
+        // Add completed assistant message to persistent state
         const assistantMsg: ADKMessage = {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          content: stream.streamedText,
+          content: text,
           createdAt: new Date().toISOString(),
           metadata: {
-            toolCalls: stream.toolCalls.length > 0 ? stream.toolCalls : undefined,
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           },
         };
         setMessages(prev => [...prev, assistantMsg]);
-      }
+      },
     });
   }, [messages, stream, threadId]);
 

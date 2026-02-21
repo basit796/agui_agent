@@ -21,6 +21,7 @@ export interface StreamToolCall {
   toolCallId: string;
   toolName: string;
   args: Record<string, any>;
+  result?: any;  // Tool execution result (weather data, etc.)
 }
 
 export interface StreamToolCallEvent extends StreamToolCall {}

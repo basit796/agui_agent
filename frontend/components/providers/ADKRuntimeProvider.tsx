@@ -12,6 +12,7 @@ import {
   useExternalStoreRuntime,
   AssistantRuntimeProvider,
   type ThreadMessageLike,
+  type AppendMessage,
 } from '@assistant-ui/react';
 import type { ADKMessage, StreamToolCall } from '@/lib/types';
 
@@ -47,7 +48,7 @@ function convertMessage(message: ADKMessage): ThreadMessageLike {
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
           args: tc.args,
-          result: { rendered: true },
+          result: tc.result || undefined,  // Pass actual result data
         }))
       : [];
 
@@ -56,6 +57,10 @@ function convertMessage(message: ADKMessage): ThreadMessageLike {
     id: message.id,
     content: [textPart, ...toolCallParts],
     createdAt: new Date(message.createdAt),
+    // Add required metadata fields for Assistant UI
+    metadata: {
+      custom: message.metadata,
+    },
   };
 }
 
@@ -82,7 +87,7 @@ export function ADKRuntimeProvider({
         toolCallId: tc.toolCallId,
         toolName: tc.toolName,
         args: tc.args,
-        result: { rendered: true },
+        result: tc.result || undefined,  // Pass actual result data during streaming
       }));
 
       return [
@@ -91,7 +96,10 @@ export function ADKRuntimeProvider({
           role: 'assistant' as const,
           id: 'streaming',
           content: [textPart, ...toolCallParts],
-          createdAt: new Date(),
+          status: { type: 'running' as const },
+          metadata: {
+            custom: { phase: phaseLabel },
+          },
         },
       ];
     }
@@ -99,21 +107,19 @@ export function ADKRuntimeProvider({
     return converted;
   }, [messages, isRunning, displayedText, streamedText, phaseLabel, streamToolCalls]);
 
+  const handleNew = async (message: AppendMessage) => {
+    const textPart = message.content.find(p => p.type === 'text');
+    if (textPart && 'text' in textPart) {
+      onSubmit(textPart.text);
+    }
+  };
+
   // Create runtime using Assistant UI's external store adapter
   const runtime = useExternalStoreRuntime({
     isRunning,
     messages: allMessages,
-    onNew: async (message) => {
-      // Extract text from the message content
-      const text = message.content
-        .filter((part) => part.type === 'text')
-        .map((part) => (part as any).text)
-        .join('');
-      
-      if (text.trim()) {
-        onSubmit(text.trim());
-      }
-    },
+    convertMessage: (m: ThreadMessageLike) => m,
+    onNew: handleNew,
   });
 
   return (

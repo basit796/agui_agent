@@ -3,7 +3,7 @@
  * 
  * This route:
  * 1. Receives POST request with question and conversation history
- * 2. Forwards to ADK backend at http://localhost:8000/sample-agent
+ * 2. Forwards to ADK backend at http://localhost:8000/weather-agent
  * 3. Translates ADK SSE events to frontend-compatible events
  * 4. Streams response back to client
  */
@@ -11,7 +11,7 @@
 import { NextRequest } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
-const AGENT_ENDPOINT = '/sample-agent';
+const AGENT_ENDPOINT = '/weather-agent'; // This should match the path used in fastapi_server.py for the weather agent
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
@@ -170,10 +170,32 @@ export async function POST(request: NextRequest) {
                 break;
               }
 
+              case 'TOOL_CALL_RESULT':
+                // ADK sends the tool result - forward it to frontend so WeatherToolUI can display it
+                if (event.toolCallId && event.content) {
+                  // Parse the result content (it's stringified JSON)
+                  let resultData: any;
+                  try {
+                    resultData = JSON.parse(event.content);
+                  } catch {
+                    resultData = event.content;
+                  }
+                  
+                  sendEvent('tool-result', {
+                    toolCallId: event.toolCallId,
+                    result: resultData,
+                  });
+                }
+                break;
+
               case 'RUN_ERROR':
                 throw new Error(event.message ?? 'Agent encountered an error');
 
-              // TEXT_MESSAGE_START, TEXT_MESSAGE_END, STEP_FINISHED, RUN_FINISHED — no action needed
+              case 'RUN_FINISHED':
+                // Stream finished successfully
+                break;
+
+              // TEXT_MESSAGE_START, TEXT_MESSAGE_END, STEP_FINISHED — no action needed
             }
           }
         }

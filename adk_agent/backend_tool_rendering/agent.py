@@ -10,14 +10,6 @@ except AttributeError:
     PreloadMemoryTool = adk_tools.preload_memory_tool.PreloadMemoryTool
 
 def get_weather_condition(code: int) -> str:
-    """Map weather code to human-readable condition.
-
-    Args:
-        code: WMO weather code.
-
-    Returns:
-        Human-readable weather condition string.
-    """
     conditions = {
         0: "Clear sky",
         1: "Mainly clear",
@@ -51,17 +43,7 @@ def get_weather_condition(code: int) -> str:
     return conditions.get(code, "Unknown")
 
 async def get_weather(location: str) -> dict[str, str | float]:
-    """Get current weather for a location.
-
-    Args:
-        location: City name.
-
-    Returns:
-        Dictionary with weather information including temperature, feels like,
-        humidity, wind speed, wind gust, conditions, and location name.
-    """
     async with httpx.AsyncClient() as client:
-        # Geocode the location
         geocoding_url = (
             f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1"
         )
@@ -76,7 +58,6 @@ async def get_weather(location: str) -> dict[str, str | float]:
         longitude = result["longitude"]
         name = result["name"]
 
-        # Get weather data
         weather_url = (
             f"https://api.open-meteo.com/v1/forecast?"
             f"latitude={latitude}&longitude={longitude}"
@@ -98,22 +79,14 @@ async def get_weather(location: str) -> dict[str, str | float]:
             "location": name,
         }
 
-# Create a sample ADK agent (this would be your actual agent)
-sample_agent = LlmAgent(
+weather_agent = LlmAgent(
     name="assistant",
     model="gemini-2.5-flash",
     instruction="""
-      You are a helpful weather assistant that provides accurate weather information.
-
-      Your primary function is to help users get weather details for specific locations. When responding:
-      - Always ask for a location if none is provided
-      - If the location name isn’t in English, please translate it
-      - If giving a location with multiple parts (e.g. "New York, NY"), use the most relevant part (e.g. "New York")
-      - Include relevant details like humidity, wind conditions, and precipitation
-      - Keep responses concise but informative
-
-      Use the get_weather tool to fetch current weather data.
-      """,
+    You are a weather assistant with the get_weather tool. When users ask about weather,
+    Ask User for a location,
+    ALWAYS call get_weather(location) to fetch real-time data. Do NOT refuse or say you cannot provide weather
+    you MUST use the tool.""",
     tools=[
         PreloadMemoryTool(),
         get_weather,
