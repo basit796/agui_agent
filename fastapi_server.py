@@ -5,7 +5,7 @@ from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
 from adk_agent.tool_based_generative_ui.agent import haiku_generator_agent
 from adk_agent.shared_state_between_agent_and_ui.agent import shared_state_agent
 from adk_agent.human_in_loop.agent import human_in_loop_agent
-from adk_agent.backend_tool_rendering.agent import sample_agent
+from adk_agent.backend_tool_rendering.agent import weather_agent
 from adk_agent.agentic_chat.agent import agentic_chat_agent
 from dotenv import load_dotenv
 load_dotenv()
@@ -45,8 +45,8 @@ adk_human_in_loop_agent = ADKAgent.from_app(
     use_in_memory_services=True,
 )
 
-chat_agent = ADKAgent(
-    adk_agent=sample_agent,
+weather_agent_instance = ADKAgent(
+    adk_agent=weather_agent,
     app_name="demo_app",
     user_id="demo_user",
     session_timeout_seconds=3600,
@@ -63,13 +63,9 @@ chat_agent = ADKAgent(
 
 # Add the ADK endpoint
 add_adk_fastapi_endpoint(app, chat_agent, path="/agentic-chat-agent")
-
-add_adk_fastapi_endpoint(app, chat_agent, path="/sample-agent")
-
+add_adk_fastapi_endpoint(app, weather_agent_instance, path="/weather-agent")
 add_adk_fastapi_endpoint(app, adk_human_in_loop_agent, path="/human-in-loop-agent")
-
 add_adk_fastapi_endpoint(app, adk_shared_state_agent, path="/shared-state-agent")
-
 add_adk_fastapi_endpoint(app, adk_agent_haiku_generator, path="/haiku-generator")
 
 @app.get("/")
