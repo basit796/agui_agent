@@ -52,7 +52,7 @@ export default function RecipeGeneratorPage() {
 
     stream.startStream({
       question,
-      agentEndpoint: 'shared-state-agent',
+      agentEndpoint: 'recipe-generator',
       conversationHistory,
       threadId,
       onComplete: (text, toolCalls) => {

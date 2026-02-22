@@ -1,17 +1,49 @@
 /**
- * SSE Streaming API Route for Weather Agent (backend_tool_rendering)
+ * SSE Streaming API Route for Haiku Generator (tool_based_generative_ui)
  * 
  * This route:
  * 1. Receives POST request with question and conversation history
- * 2. Forwards to ADK backend at http://localhost:8000/weather-agent
- * 3. Translates ADK SSE events to frontend-compatible events
- * 4. Streams response back to client
+ * 2. Defines the generate_haiku frontend tool
+ * 3. Forwards to ADK backend at http://localhost:8000/haiku-generator
+ * 4. Translates ADK SSE events to frontend-compatible events
+ * 5. Streams response back to client
  */
 
 import { NextRequest } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 const AGENT_ENDPOINT = '/haiku-generator';
+
+// Frontend tool definition - sent to backend so LLM can call it
+const GENERATE_HAIKU_TOOL = {
+  name: 'generate_haiku',
+  description: 'Generate a haiku poem with Japanese and English text, along with matching images and gradient',
+  parameters: {
+    type: 'object',
+    properties: {
+      japanese: {
+        type: 'array',
+        items: { type: 'string' },
+        description: '3 lines of haiku in Japanese (5-7-5 syllable structure)',
+      },
+      english: {
+        type: 'array',
+        items: { type: 'string' },
+        description: '3 lines of haiku translated to English',
+      },
+      selectedImages: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of image filenames that match the haiku theme (e.g., ["Mount_Fuji_Lake_Reflection_Cherry_Blossoms_Sakura_Spring.jpg"])',
+      },
+      gradient: {
+        type: 'string',
+        description: 'CSS gradient for the background (e.g., "linear-gradient(to right, #667eea, #764ba2)")',
+      },
+    },
+    required: ['japanese', 'english'],
+  },
+};
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
@@ -59,7 +91,7 @@ export async function POST(request: NextRequest) {
           },
         ];
 
-        // Call ADK backend
+        // Call ADK backend with frontend tool
         const response = await fetch(`${BACKEND_URL}${AGENT_ENDPOINT}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -68,7 +100,7 @@ export async function POST(request: NextRequest) {
             runId: `run-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
             state: {},
             messages,
-            tools: [],
+            tools: [GENERATE_HAIKU_TOOL], // ← Frontend tool sent to backend
             context: [],
             forwardedProps: {},
           }),

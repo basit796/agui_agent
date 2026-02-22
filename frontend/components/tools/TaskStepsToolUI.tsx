@@ -1,144 +1,186 @@
 /**
  * Task Steps Tool UI Component
- * Displays task breakdown with interactive step management
+ * Human-in-the-Loop pattern - User approves/modifies task steps
+ * Following RSP-Dashboard QuestionCardToolUI pattern
  */
 
 'use client';
 
-import { makeAssistantToolUI } from '@assistant-ui/react';
-import { ListChecks, CheckCircle2, Circle } from 'lucide-react';
-import { useState } from 'react';
+import { makeAssistantToolUI, useThreadRuntime } from '@assistant-ui/react';
+import { ListChecks, CheckCircle2, Circle, ThumbsUp, X } from 'lucide-react';
+import { useState, useCallback } from 'react';
 
 interface TaskStep {
   description: string;
   status: 'enabled' | 'disabled';
 }
 
-interface TaskStepsData {
+interface TaskStepsArgs {
   steps: TaskStep[];
 }
 
-export const TaskStepsToolUI = makeAssistantToolUI<any, TaskStepsData>({
-  toolName: 'generate_task_steps',
-  render: function TaskStepsDisplay({ result }) {
-    const [localSteps, setLocalSteps] = useState<TaskStep[] | null>(null);
+// Main Task Steps Component with user interaction
+function TaskStepsCard({
+  args,
+  respond,
+  isDisabled,
+}: {
+  args: TaskStepsArgs;
+  respond: (response: string) => void;
+  isDisabled: boolean;
+}) {
+  const [localSteps, setLocalSteps] = useState<TaskStep[]>(args.steps || []);
+  const [submitted, setSubmitted] = useState(false);
 
-    if (!result) {
-      return (
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 mb-2">
-          <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
-            <ListChecks className="w-5 h-5 animate-pulse" />
-            <span className="text-sm font-medium">Planning task steps...</span>
-          </div>
-        </div>
-      );
-    }
-
-    // Parse result if it's a string
-    let taskData: TaskStepsData;
-    try {
-      taskData = typeof result === 'string' ? JSON.parse(result) : result;
-    } catch {
-      return (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-2">
-          <p className="text-sm text-red-700 dark:text-red-300">Failed to parse task data</p>
-        </div>
-      );
-    }
-
-    // Use local state or original data
-    const steps = localSteps || taskData.steps;
-    const enabledCount = steps.filter(s => s.status === 'enabled').length;
-
-    const toggleStep = (index: number) => {
-      const newSteps = [...steps];
+  const toggleStep = useCallback((index: number) => {
+    if (submitted) return;
+    setLocalSteps(prev => {
+      const newSteps = [...prev];
       newSteps[index].status = newSteps[index].status === 'enabled' ? 'disabled' : 'enabled';
-      setLocalSteps(newSteps);
-    };
+      return newSteps;
+    });
+  }, [submitted]);
 
-    return (
-      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 
-                    border border-indigo-200 dark:border-indigo-800 rounded-xl p-5 mb-2 shadow-sm max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-indigo-200 dark:border-indigo-800">
-          <div className="flex items-center gap-2">
-            <ListChecks className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Task Plan
-            </h3>
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {enabledCount} of {steps.length} steps enabled
-          </div>
+  const handleApprove = useCallback(() => {
+    if (submitted) return;
+    setSubmitted(true);
+    
+    const enabledSteps = localSteps.filter(s => s.status === 'enabled');
+    const response = `User approved ${enabledSteps.length} steps:\n${enabledSteps.map((s, i) => `${i + 1}. ${s.description}`).join('\n')}`;
+    respond(response);
+  }, [localSteps, submitted, respond]);
+
+  const handleReject = useCallback(() => {
+    if (submitted) return;
+    setSubmitted(true);
+    respond('User rejected the task plan. Please ask what changes they want to make.');
+  }, [submitted, respond]);
+
+  const enabledCount = localSteps.filter(s => s.status === 'enabled').length;
+  const disabled = isDisabled || submitted;
+
+  return (
+    <div className="my-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-6 shadow-lg">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 rounded-lg bg-indigo-500">
+          <ListChecks className="w-6 h-6 text-white" />
         </div>
-
-        {/* Instructions */}
-        <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r">
-          <p className="text-sm text-blue-800 dark:text-blue-300">
-            💡 <strong>Review the plan:</strong> Click steps to disable ones you don't need. The agent will only execute enabled steps.
-          </p>
-        </div>
-
-        {/* Steps List */}
-        <div className="space-y-2">
-          {steps.map((step, idx) => (
-            <button
-              key={idx}
-              onClick={() => toggleStep(idx)}
-              className={`w-full flex items-start gap-3 p-3 rounded-lg border-2 transition-all duration-200
-                ${step.status === 'enabled'
-                  ? 'bg-white dark:bg-gray-800 border-indigo-300 dark:border-indigo-700 hover:border-indigo-400 dark:hover:border-indigo-600'
-                  : 'bg-gray-100 dark:bg-gray-900/50 border-gray-300 dark:border-gray-700 opacity-50'
-                }
-              `}
-            >
-              {/* Step Number & Icon */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                  ${step.status === 'enabled'
-                    ? 'bg-indigo-500 text-white'
-                    : 'bg-gray-400 text-gray-600'
-                  }
-                `}>
-                  {idx + 1}
-                </span>
-                {step.status === 'enabled' ? (
-                  <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
-                ) : (
-                  <Circle className="w-4 h-4 text-gray-400" />
-                )}
-              </div>
-
-              {/* Step Text */}
-              <span className={`text-left text-sm font-medium flex-1 pt-0.5
-                ${step.status === 'enabled'
-                  ? 'text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 dark:text-gray-500 line-through'
-                }
-              `}>
-                {step.description}
-              </span>
-
-              {/* Status Label */}
-              <span className={`text-xs font-semibold px-2 py-1 rounded
-                ${step.status === 'enabled'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                }
-              `}>
-                {step.status === 'enabled' ? 'Enabled' : 'Disabled'}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Footer Actions Hint */}
-        <div className="mt-4 pt-3 border-t border-indigo-200 dark:border-indigo-800">
-          <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
-            Once you're happy with the plan, tell the agent to proceed or make changes
+        <div>
+          <h3 className="font-bold text-lg text-gray-900 dark:text-white">Task Breakdown</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Select the steps you want to include ({enabledCount}/{localSteps.length} selected)
           </p>
         </div>
       </div>
-    );
+
+      {/* Task Steps */}
+      <div className="space-y-2 mb-4">
+        {localSteps.map((step, index) => {
+          const isEnabled = step.status === 'enabled';
+          return (
+            <button
+              key={index}
+              onClick={() => toggleStep(index)}
+              disabled={disabled}
+              className={`w-full flex items-start gap-3 p-4 rounded-lg border-2 transition-all duration-200 text-left ${
+                isEnabled
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40'
+                  : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800/50 opacity-60'
+              } ${disabled ? 'cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}`}
+            >
+              {isEnabled ? (
+                <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+              ) : (
+                <Circle className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+              )}
+              <span className={`text-sm font-medium ${
+                isEnabled
+                  ? 'text-gray-900 dark:text-white'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {step.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={handleApprove}
+          disabled={disabled || enabledCount === 0}
+          className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+            disabled || enabledCount === 0
+              ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:from-green-600 hover:to-emerald-700 hover:shadow-xl'
+          }`}
+        >
+          <ThumbsUp className="w-5 h-5" />
+          Approve Plan
+        </button>
+        <button
+          onClick={handleReject}
+          disabled={disabled}
+          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+            disabled
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+              : 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {submitted && (
+        <p className="mt-3 text-sm text-green-600 dark:text-green-400 font-medium">
+          ✓ Response sent to agent
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Wrapper that connects to Assistant UI runtime
+function TaskStepsWithRuntime({ args, status }: { args: TaskStepsArgs; status: { type: string } }) {
+  const thread = useThreadRuntime();
+  
+  const respond = useCallback((response: string) => {
+    thread.append({
+      role: 'user',
+      content: [{ type: 'text', text: response }],
+      parentId: null,
+    });
+  }, [thread]);
+
+  return (
+    <TaskStepsCard
+      args={args}
+      respond={respond}
+      isDisabled={status.type !== 'complete'}
+    />
+  );
+}
+
+export const TaskStepsToolUI = makeAssistantToolUI<TaskStepsArgs, any>({
+  toolName: 'generate_task_steps',
+  render: function TaskStepsDisplay({ args, status }) {
+    // Loading state while tool is being called
+    if (status.type === 'running') {
+      return (
+        <div className="my-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 p-4">
+          <div className="flex items-center gap-2">
+            <ListChecks className="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              Planning task steps...
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    // Render interactive card once tool call completes
+    return <TaskStepsWithRuntime args={args} status={status} />;
   },
 });

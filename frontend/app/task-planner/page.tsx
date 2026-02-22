@@ -52,7 +52,7 @@ export default function TaskPlannerPage() {
 
     stream.startStream({
       question,
-      agentEndpoint: 'human-in-loop-agent',
+      agentEndpoint: 'task-planner',
       conversationHistory,
       threadId,
       onComplete: (text, toolCalls) => {

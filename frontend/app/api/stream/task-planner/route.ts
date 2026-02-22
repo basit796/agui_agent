@@ -1,17 +1,49 @@
 /**
- * SSE Streaming API Route for Weather Agent (backend_tool_rendering)
+ * SSE Streaming API Route for Task Planner (human_in_loop)
  * 
  * This route:
  * 1. Receives POST request with question and conversation history
- * 2. Forwards to ADK backend at http://localhost:8000/weather-agent
- * 3. Translates ADK SSE events to frontend-compatible events
- * 4. Streams response back to client
+ * 2. Defines the generate_task_steps frontend tool
+ * 3. Forwards to ADK backend at http://localhost:8000/human-in-loop-agent
+ * 4. Translates ADK SSE events to frontend-compatible events
+ * 5. Streams response back to client
  */
 
 import { NextRequest } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 const AGENT_ENDPOINT = '/human-in-loop-agent';
+
+// Frontend tool definition - sent to backend so LLM can call it
+const GENERATE_TASK_STEPS_TOOL = {
+  name: 'generate_task_steps',
+  description: 'Generate a list of task steps for the user to review and approve',
+  parameters: {
+    type: 'object',
+    properties: {
+      steps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            description: { 
+              type: 'string',
+              description: 'The description of the task step'
+            },
+            status: { 
+              type: 'string',
+              enum: ['enabled', 'disabled'],
+              description: 'Whether the step is enabled or disabled by default'
+            },
+          },
+          required: ['description', 'status'],
+        },
+        description: 'List of task steps for the user to approve',
+      },
+    },
+    required: ['steps'],
+  },
+};
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
@@ -59,7 +91,7 @@ export async function POST(request: NextRequest) {
           },
         ];
 
-        // Call ADK backend
+        // Call ADK backend with frontend tool
         const response = await fetch(`${BACKEND_URL}${AGENT_ENDPOINT}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -68,7 +100,7 @@ export async function POST(request: NextRequest) {
             runId: `run-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
             state: {},
             messages,
-            tools: [],
+            tools: [GENERATE_TASK_STEPS_TOOL], // ← Frontend tool sent to backend
             context: [],
             forwardedProps: {},
           }),

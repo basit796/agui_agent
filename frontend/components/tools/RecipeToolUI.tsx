@@ -24,10 +24,11 @@ interface RecipeData {
   changes?: string;
 }
 
-export const RecipeToolUI = makeAssistantToolUI<any, RecipeData>({
+export const RecipeToolUI = makeAssistantToolUI<RecipeData, any>({
   toolName: 'generate_recipe',
-  render: function RecipeDisplay({ result }) {
-    if (!result) {
+  render: function RecipeDisplay({ args, status }) {
+    // Loading state
+    if (status.type === 'running' || !args) {
       return (
         <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-2">
           <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
@@ -38,17 +39,7 @@ export const RecipeToolUI = makeAssistantToolUI<any, RecipeData>({
       );
     }
 
-    // Parse result if it's a string
-    let recipe: RecipeData;
-    try {
-      recipe = typeof result === 'string' ? JSON.parse(result) : result;
-    } catch {
-      return (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-2">
-          <p className="text-sm text-red-700 dark:text-red-300">Failed to parse recipe data</p>
-        </div>
-      );
-    }
+    const recipe = args;
 
     const skillLevelColors = {
       Beginner: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
