@@ -21,8 +21,8 @@ export function AssistantMessage() {
         </div>
 
         {/* Content area */}
-        <div className="flex-1 min-w-0 max-w-[85%]">
-          <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Weather Agent</span>
+        <div className="flex-1 min-w-0 max-w-[85%] space-y-3">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Assistant Response</span>
           
           {/* Single MessagePrimitive.Content handles both text AND tool calls */}
           <MessagePrimitive.Content

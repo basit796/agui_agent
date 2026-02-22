@@ -21,10 +21,12 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
     // Loading state
     if (status.type === 'running' || !args) {
       return (
-        <div className="bg-purple-500 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 mb-2">
-          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-            <span className="text-sm font-medium">Crafting haiku...</span>
+        <div className="my-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 animate-pulse" />
+            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+              Crafting haiku...
+            </span>
           </div>
         </div>
       );
@@ -34,28 +36,27 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
     const japaneseText = Array.isArray(args.japanese) ? args.japanese.join('\n') : args.japanese || '';
     const englishText = Array.isArray(args.english) ? args.english.join('\n') : args.english || '';
     const images = Array.isArray(args.selectedImages) ? args.selectedImages : [];
-    const gradientStyle = args.gradient || 'linear-gradient(to bottom right, rgb(243 232 255), rgb(252 231 243))';
 
     return (
-      <div 
-        className="border border-purple-500 dark:border-purple-800 rounded-xl p-6 mb-2 shadow-lg"
-        style={{ background: gradientStyle }}
-      >
+      <div className="my-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 
+                      border border-purple-200 dark:border-purple-800 rounded-xl p-6 shadow-lg">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-purple-200 dark:border-purple-800">
-          <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-700">
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-purple-200 dark:border-purple-700">
+          <div className="p-2 rounded-lg bg-purple-500">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
             Generated Haiku
           </h3>
         </div>
 
         {/* Japanese Haiku */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2 text-gray-700">
+          <div className="flex items-center gap-2 mb-2">
             <span className="text-2xl">🇯🇵</span>
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-600">Japanese</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Japanese</h4>
           </div>
-          <div className="bg-gray-700 dark:bg-gray-800/70 rounded-lg p-4 backdrop-blur-sm">
+          <div className="bg-white/80 dark:bg-gray-800 rounded-lg p-4 border border-purple-100 dark:border-purple-800">
             <p className="text-xl font-serif text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-line">
               {japaneseText}
             </p>
@@ -64,11 +65,11 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
 
         {/* English Translation */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2 text-gray-700">
+          <div className="flex items-center gap-2 mb-2">
             <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-600">English Translation</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">English Translation</h4>
           </div>
-          <div className="bg-gray-700 dark:bg-gray-800/70 rounded-lg p-4 backdrop-blur-sm">
+          <div className="bg-white/80 dark:bg-gray-800 rounded-lg p-4 border border-purple-100 dark:border-purple-800">
             <p className="text-base italic text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
               {englishText}
             </p>
@@ -80,7 +81,7 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <ImageIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-500">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Complementary Images
               </h4>
             </div>
@@ -88,9 +89,9 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
               {images.map((img, idx) => (
                 <div
                   key={idx}
-                  className="px-3 py-1.5 bg-white/60 dark:bg-gray-800/60 
+                  className="px-3 py-1.5 bg-white/80 dark:bg-gray-800 
                            border border-purple-300 dark:border-purple-700 rounded-full text-xs
-                           text-purple-700 dark:text-purple-300 font-medium backdrop-blur-sm"
+                           text-purple-700 dark:text-purple-300 font-medium"
                 >
                   {img.replace(/\.(jpg|jpeg|png)$/i, '').replace(/_/g, ' ')}
                 </div>
