@@ -138,7 +138,7 @@ export function RecipeCard({ recipe, onRecipeChange, changedKeys = [] }: RecipeC
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-8 max-w-3xl w-full">
+    <div className="bg-white dark:bg-olive-950 rounded-2xl shadow-lg p-8 max-w-3xl w-screen h-screen overflow-y-auto relative">
       {/* Recipe Title */}
       <div className="mb-6">
         <input

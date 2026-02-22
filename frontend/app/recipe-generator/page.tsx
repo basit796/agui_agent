@@ -1,19 +1,19 @@
 /**
- * Recipe Generator Page with Shared State
- * Combines RecipeCard with AI Assistant in sidebar
+ * Recipe Generator Page with Assistant UI Sidebar
+ * Uses built-in AssistantSidebar from @assistant-ui/react-ui
  */
 
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
 import { ThreadPrimitive } from '@assistant-ui/react';
+import { AssistantSidebar } from '@/components/assistant-ui/AssistantSidebar';
 import { useADKStream } from '@/hooks/useADKStream';
 import { ADKRuntimeProvider } from '@/components/providers/ADKRuntimeProvider';
 import { UserMessage } from '@/components/chat/UserMessage';
 import { AssistantMessage } from '@/components/chat/AssistantMessage';
 import { RecipeToolUI } from '@/components/tools/RecipeToolUI';
 import { RecipeCard, INITIAL_RECIPE, type Recipe } from '@/components/recipe/RecipeCard';
-import { AssistantSidebar } from '@/components/assistant-ui/AssistantSidebar';
 import type { ADKMessage } from '@/lib/types';
 
 export default function RecipeGeneratorPage() {
@@ -101,44 +101,30 @@ export default function RecipeGeneratorPage() {
   }, [messages, stream, threadId, recipe]);
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-gray-950">
-      {/* Main Content - Recipe Card */}
-      <div className="flex-1 overflow-auto p-8 flex items-center justify-center">
-        <RecipeCard 
-          recipe={recipe} 
-          onRecipeChange={handleRecipeChange}
-          changedKeys={changedKeys}
-        />
-      </div>
-
-      {/* Sidebar with AI Assistant */}
-      <AssistantSidebar
-        title="AI Recipe Assistant"
-        description="Ask me to create or improve your recipe"
-        defaultOpen={true}
+    <div className="h-screen">
+      <ADKRuntimeProvider
+        messages={messages}
+        isRunning={stream.isStreaming}
+        streamedText={stream.streamedText}
+        displayedText={stream.displayedText}
+        streamToolCalls={stream.toolCalls}
+        phaseLabel={stream.phaseLabel}
+        streamingMessageId={stream.streamingMessageId}
         onSubmit={handleSubmit}
-        isLoading={stream.isStreaming}
-        onStop={stream.cancelStream}
       >
-        <ADKRuntimeProvider
-          messages={messages}
-          isRunning={stream.isStreaming}
-          streamedText={stream.streamedText}
-          displayedText={stream.displayedText}
-          streamToolCalls={stream.toolCalls}
-          phaseLabel={stream.phaseLabel}
-          streamingMessageId={stream.streamingMessageId}
-          onSubmit={handleSubmit}
-        >
-          <RecipeToolUI />
-          <ThreadPrimitive.Messages
-            components={{
-              UserMessage: UserMessage,
-              AssistantMessage: AssistantMessage,
-            }}
-          />
-        </ADKRuntimeProvider>
-      </AssistantSidebar>
+        <RecipeToolUI />
+        
+        <AssistantSidebar>
+          {/* Main Content - Recipe Card */}
+          <div className="h-full overflow-auto p-8 flex items-center justify-center bg-gray-50 dark:bg-black">
+            <RecipeCard 
+              recipe={recipe} 
+              onRecipeChange={handleRecipeChange}
+              changedKeys={changedKeys}
+            />
+          </div>
+        </AssistantSidebar>
+      </ADKRuntimeProvider>
     </div>
   );
 }
