@@ -21,7 +21,7 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
     // Loading state
     if (status.type === 'running' || !args) {
       return (
-        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 mb-2">
+        <div className="bg-purple-500 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 mb-2">
           <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
             <Sparkles className="w-5 h-5 animate-pulse" />
             <span className="text-sm font-medium">Crafting haiku...</span>
@@ -38,24 +38,24 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
 
     return (
       <div 
-        className="border border-purple-200 dark:border-purple-800 rounded-xl p-6 mb-2 shadow-lg"
+        className="border border-purple-500 dark:border-purple-800 rounded-xl p-6 mb-2 shadow-lg"
         style={{ background: gradientStyle }}
       >
         {/* Header */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-purple-200 dark:border-purple-800">
           <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-700">
             Generated Haiku
           </h3>
         </div>
 
         {/* Japanese Haiku */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 text-gray-700">
             <span className="text-2xl">🇯🇵</span>
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Japanese</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-600">Japanese</h4>
           </div>
-          <div className="bg-white/70 dark:bg-gray-800/70 rounded-lg p-4 backdrop-blur-sm">
+          <div className="bg-gray-700 dark:bg-gray-800/70 rounded-lg p-4 backdrop-blur-sm">
             <p className="text-xl font-serif text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-line">
               {japaneseText}
             </p>
@@ -64,11 +64,11 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
 
         {/* English Translation */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 text-gray-700">
             <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">English Translation</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-600">English Translation</h4>
           </div>
-          <div className="bg-white/70 dark:bg-gray-800/70 rounded-lg p-4 backdrop-blur-sm">
+          <div className="bg-gray-700 dark:bg-gray-800/70 rounded-lg p-4 backdrop-blur-sm">
             <p className="text-base italic text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
               {englishText}
             </p>
@@ -80,7 +80,7 @@ export const HaikuToolUI = makeAssistantToolUI<HaikuArgs, any>({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <ImageIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-500">
                 Complementary Images
               </h4>
             </div>
