@@ -1,6 +1,6 @@
 /**
- * ADK Runtime Provider for Assistant UI - COMPLETE FIX
- * Properly removes streaming messages when complete
+ * ADK Runtime Provider for Assistant UI - FIXED
+ * Properly handles tool results for UI rendering
  */
 
 'use client';
@@ -38,25 +38,35 @@ interface ADKRuntimeProviderProps {
  * Convert an ADKMessage to Assistant UI's ThreadMessageLike format
  */
 function convertMessage(message: ADKMessage): ThreadMessageLike {
-  const textPart = { type: 'text' as const, text: message.content };
+  const parts: any[] = [];
 
   // Create tool-call parts from completed messages
-  const toolCallParts =
-    message.role === 'assistant' && message.metadata?.toolCalls
-      ? message.metadata.toolCalls.map((tc) => ({
-          type: 'tool-call' as const,
-          toolCallId: tc.toolCallId,
-          toolName: tc.toolName,
-          args: tc.args,
-          // Mark as complete so tools become interactive
-          status: { type: 'complete' as const },
-        }))
-      : [];
+  if (message.role === 'assistant' && message.metadata?.toolCalls) {
+    message.metadata.toolCalls.forEach((tc) => {
+      parts.push({
+        type: 'tool-call' as const,
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        args: tc.args,
+        result: tc.result, // Include the result!
+        // Mark as complete so tools become interactive
+        status: { type: 'complete' as const },
+      });
+    });
+  }
+
+  // Add text part (if there's content)
+  if (message.content) {
+    parts.push({ 
+      type: 'text' as const, 
+      text: message.content 
+    });
+  }
 
   return {
     role: message.role,
     id: message.id,
-    content: [textPart, ...toolCallParts],
+    content: parts,
     createdAt: new Date(message.createdAt),
     metadata: {
       custom: message.metadata,
@@ -84,25 +94,38 @@ export function ADKRuntimeProvider({
     // 1. Currently streaming (isRunning === true)
     // 2. AND there's actual content to show
     if (isRunning && (displayedText || streamedText || streamToolCalls.length > 0)) {
-      const currentText = displayedText || streamedText || '';
-      const textPart = { type: 'text' as const, text: currentText };
+      const parts: any[] = [];
 
-      // Tool calls during streaming are marked as 'running'
-      const toolCallParts = streamToolCalls.map((tc) => ({
-        type: 'tool-call' as const,
-        toolCallId: tc.toolCallId,
-        toolName: tc.toolName,
-        args: tc.args,
-        // During streaming, tool is 'running' - disabled
-        status: { type: 'running' as const },
-      }));
+      // Tool calls during streaming
+      streamToolCalls.forEach((tc) => {
+        parts.push({
+          type: 'tool-call' as const,
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          args: tc.args,
+          result: tc.result, // Include result if available
+          // During streaming, tool status depends on whether we have a result
+          status: tc.result 
+            ? { type: 'complete' as const }
+            : { type: 'running' as const },
+        });
+      });
+
+      // Text content
+      const currentText = displayedText || streamedText || '';
+      if (currentText) {
+        parts.push({ 
+          type: 'text' as const, 
+          text: currentText 
+        });
+      }
 
       return [
         ...converted,
         {
           role: 'assistant' as const,
           id: streamingMessageId || 'streaming',
-          content: [textPart, ...toolCallParts],
+          content: parts,
           status: { type: 'running' as const },
           metadata: {
             custom: { phase: phaseLabel },
@@ -112,7 +135,6 @@ export function ADKRuntimeProvider({
     }
 
     // When not streaming, only return completed messages
-    // This ensures the streaming message disappears
     return converted;
   }, [messages, isRunning, displayedText, streamedText, phaseLabel, streamToolCalls, streamingMessageId]);
 

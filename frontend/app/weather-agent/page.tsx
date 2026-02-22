@@ -1,12 +1,7 @@
 /**
- * Weather Agent Page
+ * Weather Agent Page - FIXED
  * 
- * This is a complete implementation of the backend_tool_rendering ADK agent
- * with Assistant UI frontend. It demonstrates:
- * - SSE streaming from ADK backend
- * - Real-time message display
- * - Tool call rendering (weather data)
- * - Clean chat interface
+ * Properly integrates tool UI rendering with spacing
  */
 
 'use client';
