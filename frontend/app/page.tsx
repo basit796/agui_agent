@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Cloud, Sparkles } from "lucide-react";
+import { Cloud, Sparkles, ChefHat, ListChecks, MessageCircle } from "lucide-react";
 
 export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-950 dark:to-gray-900">
-      <main className="max-w-4xl mx-auto px-6 py-16">
+      <main className="max-w-5xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -21,8 +21,8 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Agent Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        {/* Agent Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {/* Weather Agent */}
           <Link href="/weather-agent">
             <div className="group bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 cursor-pointer">
@@ -35,7 +35,7 @@ export default function Home() {
                     Weather Agent
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Get real-time weather information for any city. Demonstrates tool-based generative UI with weather data visualization.
+                    Get real-time weather information for any city with detailed metrics and conditions.
                   </p>
                   <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
                     Try it now
@@ -46,7 +46,99 @@ export default function Home() {
             </div>
           </Link>
 
-          {/* More agents coming soon */}
+          {/* Haiku Generator */}
+          <Link href="/haiku-generator">
+            <div className="group bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-300 cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Haiku Generator
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Create beautiful Japanese haikus with English translations and complementary imagery.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400">
+                    Try it now
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Recipe Generator */}
+          <Link href="/recipe-generator">
+            <div className="group bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:border-orange-300 dark:hover:border-orange-700 transition-all duration-300 cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ChefHat className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Recipe Generator
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Create and customize delicious recipes with ingredients, instructions, and cooking tips.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm font-medium text-orange-600 dark:text-orange-400">
+                    Try it now
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Task Planner */}
+          <Link href="/task-planner">
+            <div className="group bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300 cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ListChecks className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Task Planner
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Break down complex tasks into manageable steps with human-in-the-loop approval.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                    Try it now
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Chat Agent */}
+          <Link href="/chat-agent">
+            <div className="group bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:border-cyan-300 dark:hover:border-cyan-700 transition-all duration-300 cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageCircle className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Chat Agent
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Conversational assistant for general questions, brainstorming, and friendly chat.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm font-medium text-cyan-600 dark:text-cyan-400">
+                    Try it now
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Coming Soon Placeholder */}
           <div className="bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-6 border-2 border-dashed border-gray-300 dark:border-gray-700">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
@@ -57,7 +149,7 @@ export default function Home() {
                   More Agents
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Additional agent examples coming soon: Agentic Chat, Human-in-Loop, Shared State, and Tool-based UI.
+                  Additional agent examples coming soon. Explore the existing agents to see ADK + Assistant UI in action!
                 </p>
               </div>
             </div>
