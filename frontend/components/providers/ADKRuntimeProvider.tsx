@@ -88,7 +88,7 @@ export function ADKRuntimeProvider({
   // Build the message list
   const allMessages = useMemo(() => {
     // Convert all completed messages
-    const converted = messages.map(convertMessage);
+    const converted = (messages ?? []).map(convertMessage);
 
     // CRITICAL: Only add streaming message if:
     // 1. Currently streaming (isRunning === true)

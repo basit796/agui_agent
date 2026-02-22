@@ -69,7 +69,7 @@ export function ClaudeUI() {
                   <Plus className="w-4 h-4 text-[#1a1a18] dark:text-[#eee]" />
                 </button>
               </ComposerPrimitive.AddAttachment>
-              <span className="text-sm text-gray-600 dark:text-gray-400">Gemini Flash 2.0</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Gemini Flash 2.5</span>
             </div>
             <ComposerPrimitive.Send asChild>
               <button className="rounded-lg bg-[#ae5630] hover:bg-[#c4633a] p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
