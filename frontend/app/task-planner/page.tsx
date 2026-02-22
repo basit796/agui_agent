@@ -147,6 +147,7 @@ export default function TaskPlannerPage() {
                 phaseLabel={stream.phaseLabel}
                 onSubmit={handleSubmit}
               >
+                {/* TaskStepsToolUI is auto-registered and will render tool calls in messages */}
                 <TaskStepsToolUI />
                 <ThreadPrimitive.Messages
                   components={{

@@ -123,12 +123,16 @@ export function useADKStream() {
                   break;
 
                 case 'done':
-                  setIsStreaming(false);
-                  setCurrentPhase('complete');
-                  // Call onComplete callback with final data
-                  if (onCompleteRef.current) {
-                    onCompleteRef.current(accumulatedText, toolCalls);
-                  }
+                  // Use a ref to capture the latest tool calls before calling onComplete
+                  setToolCalls(currentToolCalls => {
+                    setIsStreaming(false);
+                    setCurrentPhase('complete');
+                    // Call onComplete callback with final data
+                    if (onCompleteRef.current) {
+                      onCompleteRef.current(accumulatedText, currentToolCalls);
+                    }
+                    return currentToolCalls;
+                  });
                   break;
               }
             } catch (e) {
