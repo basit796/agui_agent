@@ -1,7 +1,6 @@
 /**
- * Custom hook for managing SSE streaming from ADK agents - HANDLES MULTIPLE STREAMS
- * The backend may send multiple streams (tool call, then response)
- * We accumulate everything into ONE message
+ * Custom hook for managing SSE streaming from ADK agents - WITH STATE SUPPORT
+ * Supports passing initial state to agents for shared state pattern
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -12,6 +11,7 @@ interface StartStreamOptions {
   agentEndpoint: string;
   conversationHistory?: ConversationHistoryMessage[];
   threadId?: string;
+  initialState?: any; // State to pass to agent
   onComplete?: (text: string, toolCalls: StreamToolCall[]) => void;
 }
 
@@ -28,7 +28,6 @@ export function useADKStream() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const onCompleteRef = useRef<((text: string, toolCalls: StreamToolCall[]) => void) | null>(null);
   
-  // Track if we've received the first 'done' event
   const firstDoneReceivedRef = useRef(false);
 
   const cancelStream = useCallback(() => {
@@ -43,8 +42,14 @@ export function useADKStream() {
     firstDoneReceivedRef.current = false;
   }, []);
 
-  const startStream = useCallback(async ({ question, agentEndpoint, conversationHistory = [], threadId, onComplete }: StartStreamOptions) => {
-    // Generate unique ID for this streaming session
+  const startStream = useCallback(async ({ 
+    question, 
+    agentEndpoint, 
+    conversationHistory = [], 
+    threadId, 
+    initialState,
+    onComplete 
+  }: StartStreamOptions) => {
     const newStreamingId = `streaming-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setStreamingMessageId(newStreamingId);
     
@@ -56,7 +61,6 @@ export function useADKStream() {
     setError(null);
     firstDoneReceivedRef.current = false;
 
-    // Store onComplete callback
     onCompleteRef.current = onComplete || null;
 
     const controller = new AbortController();
@@ -70,6 +74,7 @@ export function useADKStream() {
           question,
           conversationHistory,
           threadId: threadId || `thread-${Date.now()}`,
+          state: initialState || {}, // Pass state to backend
         }),
         signal: controller.signal,
       });
@@ -145,14 +150,9 @@ export function useADKStream() {
                   break;
 
                 case 'done':
-                  // CRITICAL: Backend sends multiple 'done' events
-                  // Only process the FINAL one (when stream actually ends)
                   if (!firstDoneReceivedRef.current) {
-                    // First 'done' - just mark it, don't complete yet
                     firstDoneReceivedRef.current = true;
-                    console.log('First done event received, waiting for final completion...');
                   }
-                  // Don't call onComplete yet - wait for stream to actually end
                   break;
               }
             } catch (e) {
@@ -163,14 +163,11 @@ export function useADKStream() {
         }
       }
 
-      // Stream has ACTUALLY ended - now complete
-      console.log('Stream fully completed. Final text:', accumulatedText, 'Tool calls:', accumulatedToolCalls);
-      
+      // Stream completed
       if (onCompleteRef.current) {
         onCompleteRef.current(accumulatedText, accumulatedToolCalls);
       }
       
-      // Clear streaming state
       setIsStreaming(false);
       setCurrentPhase('complete');
       setToolCalls([]);

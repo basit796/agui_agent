@@ -1,9 +1,9 @@
 /**
- * SSE Streaming API Route for Weather Agent (backend_tool_rendering)
+ * SSE Streaming API Route for Recipe Generator (with state support)
  * 
  * This route:
- * 1. Receives POST request with question and conversation history
- * 2. Forwards to ADK backend at http://localhost:8000/weather-agent
+ * 1. Receives POST request with question, conversation history, and current state
+ * 2. Forwards to ADK backend at http://localhost:8000/shared-state-agent
  * 3. Translates ADK SSE events to frontend-compatible events
  * 4. Streams response back to client
  */
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   
   // Parse request body
   const body = await request.json();
-  const { question, conversationHistory = [], threadId } = body;
+  const { question, conversationHistory = [], threadId, state = {} } = body;
 
   if (!question || question.trim().length === 0) {
     return new Response(
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        sendEvent('phase', { phase: 'understanding', label: 'Understanding your question...' });
+        sendEvent('phase', { phase: 'understanding', label: 'Understanding your request...' });
 
         // Build messages array for ADK agent
         const messages = [
@@ -59,14 +59,14 @@ export async function POST(request: NextRequest) {
           },
         ];
 
-        // Call ADK backend
+        // Call ADK backend with state
         const response = await fetch(`${BACKEND_URL}${AGENT_ENDPOINT}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             threadId: threadId || `thread-${Date.now()}`,
             runId: `run-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-            state: {},
+            state: state, // Pass the current state from frontend
             messages,
             tools: [],
             context: [],
@@ -84,9 +84,8 @@ export async function POST(request: NextRequest) {
 
         const decoder = new TextDecoder();
         let buffer = '';
-        let fullAnswer = '';
         
-        // Track pending tool calls (accumulated during streaming)
+        // Track pending tool calls
         const pendingToolCalls = new Map<string, { name: string; argsBuffer: string }>();
 
         sendEvent('phase', { phase: 'synthesizing', label: 'Generating response...' });
@@ -101,7 +100,6 @@ export async function POST(request: NextRequest) {
           buffer = lines.pop() ?? '';
 
           for (const line of lines) {
-            // ADK sends events as SSE `data:` lines with JSON object that has a `type` field
             if (!line.startsWith('data: ')) continue;
             const raw = line.slice(6).trim();
             if (!raw || raw === '[DONE]') continue;
@@ -128,7 +126,6 @@ export async function POST(request: NextRequest) {
 
               case 'TEXT_MESSAGE_CONTENT':
                 if (event.delta) {
-                  fullAnswer += event.delta;
                   sendEvent('token', { text: event.delta });
                 }
                 break;
@@ -171,9 +168,7 @@ export async function POST(request: NextRequest) {
               }
 
               case 'TOOL_CALL_RESULT':
-                // ADK sends the tool result - forward it to frontend so WeatherToolUI can display it
                 if (event.toolCallId && event.content) {
-                  // Parse the result content (it's stringified JSON)
                   let resultData: any;
                   try {
                     resultData = JSON.parse(event.content);
@@ -194,18 +189,15 @@ export async function POST(request: NextRequest) {
               case 'RUN_FINISHED':
                 // Stream finished successfully
                 break;
-
-              // TEXT_MESSAGE_START, TEXT_MESSAGE_END, STEP_FINISHED — no action needed
             }
           }
         }
 
-        // Send completion event
         sendEvent('done', {});
         controller.close();
 
       } catch (error: any) {
-        console.error('[Weather Agent Stream] Error:', error.message);
+        console.error('[Recipe Generator Stream] Error:', error.message);
         sendEvent('error', { message: error.message || 'An unexpected error occurred' });
         controller.close();
       }
