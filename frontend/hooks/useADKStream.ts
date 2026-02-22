@@ -1,5 +1,7 @@
 /**
- * Custom hook for managing SSE streaming from ADK agents
+ * Custom hook for managing SSE streaming from ADK agents - HANDLES MULTIPLE STREAMS
+ * The backend may send multiple streams (tool call, then response)
+ * We accumulate everything into ONE message
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -25,12 +27,20 @@ export function useADKStream() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const onCompleteRef = useRef<((text: string, toolCalls: StreamToolCall[]) => void) | null>(null);
+  
+  // Track if we've received the first 'done' event
+  const firstDoneReceivedRef = useRef(false);
 
   const cancelStream = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     setIsStreaming(false);
+    setToolCalls([]);
+    setStreamedText('');
+    setDisplayedText('');
+    setPhaseLabel('');
+    firstDoneReceivedRef.current = false;
   }, []);
 
   const startStream = useCallback(async ({ question, agentEndpoint, conversationHistory = [], threadId, onComplete }: StartStreamOptions) => {
@@ -44,6 +54,7 @@ export function useADKStream() {
     setPhaseLabel('');
     setToolCalls([]);
     setError(null);
+    firstDoneReceivedRef.current = false;
 
     // Store onComplete callback
     onCompleteRef.current = onComplete || null;
@@ -73,6 +84,7 @@ export function useADKStream() {
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulatedText = '';
+      let accumulatedToolCalls: StreamToolCall[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -102,20 +114,25 @@ export function useADKStream() {
                 case 'token':
                   accumulatedText += data.text;
                   setStreamedText(accumulatedText);
-                  // Update typewriter instantly during streaming
                   setDisplayedText(accumulatedText);
                   break;
 
                 case 'tool-call':
-                  setToolCalls(prev => [...prev, {
+                  const newToolCall = {
                     toolCallId: data.toolCallId,
                     toolName: data.toolName,
                     args: data.args,
-                  }]);
+                  };
+                  accumulatedToolCalls.push(newToolCall);
+                  setToolCalls(prev => [...prev, newToolCall]);
                   break;
 
                 case 'tool-result':
-                  // Update the tool call with its result data
+                  accumulatedToolCalls = accumulatedToolCalls.map(tc => 
+                    tc.toolCallId === data.toolCallId
+                      ? { ...tc, result: data.result }
+                      : tc
+                  );
                   setToolCalls(prev => prev.map(tc => 
                     tc.toolCallId === data.toolCallId
                       ? { ...tc, result: data.result }
@@ -128,16 +145,14 @@ export function useADKStream() {
                   break;
 
                 case 'done':
-                  // Use a ref to capture the latest tool calls before calling onComplete
-                  setToolCalls(currentToolCalls => {
-                    setIsStreaming(false);
-                    setCurrentPhase('complete');
-                    // Call onComplete callback with final data
-                    if (onCompleteRef.current) {
-                      onCompleteRef.current(accumulatedText, currentToolCalls);
-                    }
-                    return currentToolCalls;
-                  });
+                  // CRITICAL: Backend sends multiple 'done' events
+                  // Only process the FINAL one (when stream actually ends)
+                  if (!firstDoneReceivedRef.current) {
+                    // First 'done' - just mark it, don't complete yet
+                    firstDoneReceivedRef.current = true;
+                    console.log('First done event received, waiting for final completion...');
+                  }
+                  // Don't call onComplete yet - wait for stream to actually end
                   break;
               }
             } catch (e) {
@@ -147,12 +162,34 @@ export function useADKStream() {
           }
         }
       }
+
+      // Stream has ACTUALLY ended - now complete
+      console.log('Stream fully completed. Final text:', accumulatedText, 'Tool calls:', accumulatedToolCalls);
+      
+      if (onCompleteRef.current) {
+        onCompleteRef.current(accumulatedText, accumulatedToolCalls);
+      }
+      
+      // Clear streaming state
+      setIsStreaming(false);
+      setCurrentPhase('complete');
+      setToolCalls([]);
+      setStreamedText('');
+      setDisplayedText('');
+      setPhaseLabel('');
+      firstDoneReceivedRef.current = false;
+
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         setError(err.message || 'Stream failed');
       }
     } finally {
       setIsStreaming(false);
+      setToolCalls([]);
+      setStreamedText('');
+      setDisplayedText('');
+      setPhaseLabel('');
+      firstDoneReceivedRef.current = false;
     }
   }, []);
 

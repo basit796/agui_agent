@@ -1,7 +1,6 @@
 /**
- * ADK Runtime Provider for Assistant UI - SIMPLIFIED
- * 
- * Tool responses now handled via global function in TaskStepsToolUI
+ * ADK Runtime Provider for Assistant UI - COMPLETE FIX
+ * Properly removes streaming messages when complete
  */
 
 'use client';
@@ -76,13 +75,15 @@ export function ADKRuntimeProvider({
   streamingMessageId,
   onSubmit,
 }: ADKRuntimeProviderProps) {
-  // Build the message list including the in-progress streaming message
+  // Build the message list
   const allMessages = useMemo(() => {
     // Convert all completed messages
     const converted = messages.map(convertMessage);
 
-    // Only add streaming message if actually streaming
-    if (isRunning) {
+    // CRITICAL: Only add streaming message if:
+    // 1. Currently streaming (isRunning === true)
+    // 2. AND there's actual content to show
+    if (isRunning && (displayedText || streamedText || streamToolCalls.length > 0)) {
       const currentText = displayedText || streamedText || '';
       const textPart = { type: 'text' as const, text: currentText };
 
@@ -96,31 +97,28 @@ export function ADKRuntimeProvider({
         status: { type: 'running' as const },
       }));
 
-      // Only add if there's content
-      if (currentText || toolCallParts.length > 0 || phaseLabel) {
-        return [
-          ...converted,
-          {
-            role: 'assistant' as const,
-            id: streamingMessageId || 'streaming',
-            content: [textPart, ...toolCallParts],
-            status: { type: 'running' as const },
-            metadata: {
-              custom: { phase: phaseLabel },
-            },
+      return [
+        ...converted,
+        {
+          role: 'assistant' as const,
+          id: streamingMessageId || 'streaming',
+          content: [textPart, ...toolCallParts],
+          status: { type: 'running' as const },
+          metadata: {
+            custom: { phase: phaseLabel },
           },
-        ];
-      }
+        },
+      ];
     }
 
+    // When not streaming, only return completed messages
+    // This ensures the streaming message disappears
     return converted;
   }, [messages, isRunning, displayedText, streamedText, phaseLabel, streamToolCalls, streamingMessageId]);
 
   const handleNew = async (message: AppendMessage) => {
     const textPart = message.content.find(p => p.type === 'text');
     if (textPart && 'text' in textPart) {
-      // All messages go through onSubmit
-      // Tool responses are handled via global function in TaskStepsToolUI
       onSubmit(textPart.text);
     }
   };
