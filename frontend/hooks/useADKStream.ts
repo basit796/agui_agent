@@ -21,6 +21,7 @@ export function useADKStream() {
   const [currentPhase, setCurrentPhase] = useState<StreamPhase>('understanding');
   const [toolCalls, setToolCalls] = useState<StreamToolCall[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [streamingMessageId, setStreamingMessageId] = useState<string>('');
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const onCompleteRef = useRef<((text: string, toolCalls: StreamToolCall[]) => void) | null>(null);
@@ -33,6 +34,10 @@ export function useADKStream() {
   }, []);
 
   const startStream = useCallback(async ({ question, agentEndpoint, conversationHistory = [], threadId, onComplete }: StartStreamOptions) => {
+    // Generate unique ID for this streaming session
+    const newStreamingId = `streaming-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    setStreamingMessageId(newStreamingId);
+    
     setIsStreaming(true);
     setStreamedText('');
     setDisplayedText('');
@@ -159,6 +164,7 @@ export function useADKStream() {
     currentPhase,
     toolCalls,
     error,
+    streamingMessageId,
     startStream,
     cancelStream,
   };

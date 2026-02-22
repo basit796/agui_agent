@@ -1,14 +1,13 @@
 /**
- * Task Steps Tool UI Component
- * Human-in-the-Loop pattern - User approves/modifies task steps
- * Following RSP-Dashboard QuestionCardToolUI pattern
+ * Task Steps Tool UI Component - COMPLETE FIX
+ * Uses custom respond function instead of thread.append
  */
 
 'use client';
 
-import { makeAssistantToolUI, useThreadRuntime } from '@assistant-ui/react';
+import { makeAssistantToolUI } from '@assistant-ui/react';
 import { ListChecks, CheckCircle2, Circle, ThumbsUp, X } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 
 interface TaskStep {
   description: string;
@@ -19,45 +18,57 @@ interface TaskStepsArgs {
   steps: TaskStep[];
 }
 
+// Create a context to pass the respond function
+let globalRespondFunction: ((response: string) => void) | null = null;
+
+export function setTaskStepsRespondFunction(fn: (response: string) => void) {
+  globalRespondFunction = fn;
+}
+
 // Main Task Steps Component with user interaction
 function TaskStepsCard({
   args,
-  respond,
   isDisabled,
 }: {
   args: TaskStepsArgs;
-  respond: (response: string) => void;
   isDisabled: boolean;
 }) {
   const [localSteps, setLocalSteps] = useState<TaskStep[]>(args.steps || []);
   const [submitted, setSubmitted] = useState(false);
 
-  const toggleStep = useCallback((index: number) => {
-    if (submitted) return;
+  const toggleStep = (index: number) => {
+    if (isDisabled || submitted) return;
+    
     setLocalSteps(prev => {
       const newSteps = [...prev];
-      newSteps[index].status = newSteps[index].status === 'enabled' ? 'disabled' : 'enabled';
+      newSteps[index] = {
+        ...newSteps[index],
+        status: newSteps[index].status === 'enabled' ? 'disabled' : 'enabled'
+      };
       return newSteps;
     });
-  }, [submitted]);
+  };
 
-  const handleApprove = useCallback(() => {
-    if (submitted) return;
-    setSubmitted(true);
+  const handleApprove = () => {
+    if (submitted || isDisabled || !globalRespondFunction) return;
     
+    setSubmitted(true);
     const enabledSteps = localSteps.filter(s => s.status === 'enabled');
     const response = `User approved ${enabledSteps.length} steps:\n${enabledSteps.map((s, i) => `${i + 1}. ${s.description}`).join('\n')}`;
-    respond(response);
-  }, [localSteps, submitted, respond]);
+    
+    // Use the global respond function
+    globalRespondFunction(response);
+  };
 
-  const handleReject = useCallback(() => {
-    if (submitted) return;
+  const handleReject = () => {
+    if (submitted || isDisabled || !globalRespondFunction) return;
+    
     setSubmitted(true);
-    respond('User rejected the task plan. Please ask what changes they want to make.');
-  }, [submitted, respond]);
+    globalRespondFunction('User rejected the task plan. Please ask what changes they want to make.');
+  };
 
   const enabledCount = localSteps.filter(s => s.status === 'enabled').length;
-  const disabled = isDisabled || submitted;
+  const isInteractionDisabled = isDisabled || submitted;
 
   return (
     <div className="my-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-6 shadow-lg">
@@ -79,15 +90,14 @@ function TaskStepsCard({
         {localSteps.map((step, index) => {
           const isEnabled = step.status === 'enabled';
           return (
-            <button
+            <div
               key={index}
               onClick={() => toggleStep(index)}
-              disabled={disabled}
               className={`w-full flex items-start gap-3 p-4 rounded-lg border-2 transition-all duration-200 text-left ${
                 isEnabled
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40'
                   : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800/50 opacity-60'
-              } ${disabled ? 'cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}`}
+              } ${isInteractionDisabled ? 'cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}`}
             >
               {isEnabled ? (
                 <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
@@ -101,7 +111,7 @@ function TaskStepsCard({
               }`}>
                 {step.description}
               </span>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -110,9 +120,9 @@ function TaskStepsCard({
       <div className="flex gap-3">
         <button
           onClick={handleApprove}
-          disabled={disabled || enabledCount === 0}
+          disabled={isInteractionDisabled || enabledCount === 0}
           className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
-            disabled || enabledCount === 0
+            isInteractionDisabled || enabledCount === 0
               ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
               : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:from-green-600 hover:to-emerald-700 hover:shadow-xl'
           }`}
@@ -122,9 +132,9 @@ function TaskStepsCard({
         </button>
         <button
           onClick={handleReject}
-          disabled={disabled}
+          disabled={isInteractionDisabled}
           className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
-            disabled
+            isInteractionDisabled
               ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
               : 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
@@ -142,22 +152,11 @@ function TaskStepsCard({
   );
 }
 
-// Wrapper that connects to Assistant UI runtime
+// Wrapper component
 function TaskStepsWithRuntime({ args, status }: { args: TaskStepsArgs; status: { type: string } }) {
-  const thread = useThreadRuntime();
-  
-  const respond = useCallback((response: string) => {
-    thread.append({
-      role: 'user',
-      content: [{ type: 'text', text: response }],
-      parentId: null,
-    });
-  }, [thread]);
-
   return (
     <TaskStepsCard
       args={args}
-      respond={respond}
       isDisabled={status.type !== 'complete'}
     />
   );

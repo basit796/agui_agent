@@ -145,6 +145,7 @@ export default function HaikuGeneratorPage() {
                 displayedText={stream.displayedText}
                 streamToolCalls={stream.toolCalls}
                 phaseLabel={stream.phaseLabel}
+                streamingMessageId={stream.streamingMessageId}
                 onSubmit={handleSubmit}
               >
                 <HaikuToolUI />

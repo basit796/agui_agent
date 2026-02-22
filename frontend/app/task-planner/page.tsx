@@ -1,6 +1,6 @@
 /**
- * Task Planner Agent Page
- * Human-in-the-loop task planning with step approval
+ * Task Planner Agent Page - ULTIMATE FIX
+ * Sets up global respond function for TaskStepsToolUI
  */
 
 'use client';
@@ -13,7 +13,7 @@ import { ADKRuntimeProvider } from '@/components/providers/ADKRuntimeProvider';
 import { UserMessage } from '@/components/chat/UserMessage';
 import { AssistantMessage } from '@/components/chat/AssistantMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
-import { TaskStepsToolUI } from '@/components/tools/TaskStepsToolUI';
+import { TaskStepsToolUI, setTaskStepsRespondFunction } from '@/components/tools/TaskStepsToolUI';
 import type { ADKMessage } from '@/lib/types';
 
 const SUGGESTED_QUESTIONS = [
@@ -36,13 +36,69 @@ export default function TaskPlannerPage() {
     }
   }, [messages, stream.displayedText, stream.toolCalls]);
 
+  /**
+   * Handle tool responses (from TaskStepsToolUI)
+   */
+  const handleToolResponse = useCallback((response: string) => {
+    console.log('Tool response received:', response);
+    
+    // Add the tool response as a user message
+    const toolResponseMsg: ADKMessage = {
+      id: `tool-response-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      role: 'user',
+      content: response,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        isToolResponse: true,
+      },
+    };
+    
+    setMessages(prev => [...prev, toolResponseMsg]);
+
+    // Build conversation history INCLUDING the tool response
+    const conversationHistory = [...messages, toolResponseMsg].map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    // Start a new stream with the tool response
+    stream.startStream({
+      question: response,
+      agentEndpoint: 'task-planner',
+      conversationHistory,
+      threadId,
+      onComplete: (text, toolCalls) => {
+        const assistantMsg: ADKMessage = {
+          id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          role: 'assistant',
+          content: text,
+          createdAt: new Date().toISOString(),
+          metadata: {
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          },
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+      },
+    });
+  }, [messages, stream, threadId]);
+
+  // Set up the global respond function for TaskStepsToolUI
+  useEffect(() => {
+    setTaskStepsRespondFunction(handleToolResponse);
+  }, [handleToolResponse]);
+
+  /**
+   * Handle normal user messages (from chat input)
+   */
   const handleSubmit = useCallback((question: string) => {
+    // Create user message with unique ID
     const userMsg: ADKMessage = {
-      id: `user-${Date.now()}`,
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       role: 'user',
       content: question,
       createdAt: new Date().toISOString(),
     };
+    
     setMessages(prev => [...prev, userMsg]);
 
     const conversationHistory = messages.map(msg => ({
@@ -57,7 +113,7 @@ export default function TaskPlannerPage() {
       threadId,
       onComplete: (text, toolCalls) => {
         const assistantMsg: ADKMessage = {
-          id: `assistant-${Date.now()}`,
+          id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           role: 'assistant',
           content: text,
           createdAt: new Date().toISOString(),
@@ -145,6 +201,7 @@ export default function TaskPlannerPage() {
                 displayedText={stream.displayedText}
                 streamToolCalls={stream.toolCalls}
                 phaseLabel={stream.phaseLabel}
+                streamingMessageId={stream.streamingMessageId}
                 onSubmit={handleSubmit}
               >
                 {/* TaskStepsToolUI is auto-registered and will render tool calls in messages */}

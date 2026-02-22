@@ -160,6 +160,7 @@ export default function WeatherAgentPage() {
                 displayedText={stream.displayedText}
                 streamToolCalls={stream.toolCalls}
                 phaseLabel={stream.phaseLabel}
+                streamingMessageId={stream.streamingMessageId}
                 onSubmit={handleSubmit}
               >
                 {/* Register Weather Tool UI */}

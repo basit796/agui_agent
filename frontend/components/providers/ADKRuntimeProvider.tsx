@@ -1,8 +1,7 @@
 /**
- * ADK Runtime Provider for Assistant UI
+ * ADK Runtime Provider for Assistant UI - SIMPLIFIED
  * 
- * This provider bridges our custom ADK streaming state to Assistant UI's runtime.
- * It converts our messages to ThreadMessageLike format that Assistant UI expects.
+ * Tool responses now handled via global function in TaskStepsToolUI
  */
 
 'use client';
@@ -25,11 +24,13 @@ interface ADKRuntimeProviderProps {
   /** Full streamed text */
   streamedText: string;
   /** Text displayed (same as streamedText for instant display) */
-  displayedText: string;
+  displayedText?: string;
   /** Tool calls received during streaming */
   streamToolCalls: StreamToolCall[];
   /** Current phase label (during streaming) */
   phaseLabel: string;
+  /** Unique ID for the current streaming message */
+  streamingMessageId: string;
   /** Handler for new user messages */
   onSubmit: (question: string) => void;
 }
@@ -40,7 +41,7 @@ interface ADKRuntimeProviderProps {
 function convertMessage(message: ADKMessage): ThreadMessageLike {
   const textPart = { type: 'text' as const, text: message.content };
 
-  // Build tool-call content parts from persisted metadata
+  // Create tool-call parts from completed messages
   const toolCallParts =
     message.role === 'assistant' && message.metadata?.toolCalls
       ? message.metadata.toolCalls.map((tc) => ({
@@ -48,7 +49,8 @@ function convertMessage(message: ADKMessage): ThreadMessageLike {
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
           args: tc.args,
-          result: tc.result || undefined,  // Pass actual result data
+          // Mark as complete so tools become interactive
+          status: { type: 'complete' as const },
         }))
       : [];
 
@@ -57,7 +59,6 @@ function convertMessage(message: ADKMessage): ThreadMessageLike {
     id: message.id,
     content: [textPart, ...toolCallParts],
     createdAt: new Date(message.createdAt),
-    // Add required metadata fields for Assistant UI
     metadata: {
       custom: message.metadata,
     },
@@ -72,44 +73,54 @@ export function ADKRuntimeProvider({
   displayedText,
   streamToolCalls,
   phaseLabel,
+  streamingMessageId,
   onSubmit,
 }: ADKRuntimeProviderProps) {
   // Build the message list including the in-progress streaming message
   const allMessages = useMemo(() => {
+    // Convert all completed messages
     const converted = messages.map(convertMessage);
 
-    // Add in-progress streaming message — use displayedText for real-time display
-    if (isRunning && (displayedText || streamedText || phaseLabel)) {
-      const textPart = { type: 'text' as const, text: displayedText || '' };
+    // Only add streaming message if actually streaming
+    if (isRunning) {
+      const currentText = displayedText || streamedText || '';
+      const textPart = { type: 'text' as const, text: currentText };
 
+      // Tool calls during streaming are marked as 'running'
       const toolCallParts = streamToolCalls.map((tc) => ({
         type: 'tool-call' as const,
         toolCallId: tc.toolCallId,
         toolName: tc.toolName,
         args: tc.args,
-        result: tc.result || undefined,  // Pass actual result data during streaming
+        // During streaming, tool is 'running' - disabled
+        status: { type: 'running' as const },
       }));
 
-      return [
-        ...converted,
-        {
-          role: 'assistant' as const,
-          id: 'streaming',
-          content: [textPart, ...toolCallParts],
-          status: { type: 'running' as const },
-          metadata: {
-            custom: { phase: phaseLabel },
+      // Only add if there's content
+      if (currentText || toolCallParts.length > 0 || phaseLabel) {
+        return [
+          ...converted,
+          {
+            role: 'assistant' as const,
+            id: streamingMessageId || 'streaming',
+            content: [textPart, ...toolCallParts],
+            status: { type: 'running' as const },
+            metadata: {
+              custom: { phase: phaseLabel },
+            },
           },
-        },
-      ];
+        ];
+      }
     }
 
     return converted;
-  }, [messages, isRunning, displayedText, streamedText, phaseLabel, streamToolCalls]);
+  }, [messages, isRunning, displayedText, streamedText, phaseLabel, streamToolCalls, streamingMessageId]);
 
   const handleNew = async (message: AppendMessage) => {
     const textPart = message.content.find(p => p.type === 'text');
     if (textPart && 'text' in textPart) {
+      // All messages go through onSubmit
+      // Tool responses are handled via global function in TaskStepsToolUI
       onSubmit(textPart.text);
     }
   };
