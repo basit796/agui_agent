@@ -38,7 +38,7 @@ export default function HaikuGeneratorPage() {
 
   const handleSubmit = useCallback((question: string) => {
     const userMsg: ADKMessage = {
-      id: `user-${Date.now()}`,
+      id: crypto.randomUUID(),
       role: 'user',
       content: question,
       createdAt: new Date().toISOString(),
@@ -57,7 +57,7 @@ export default function HaikuGeneratorPage() {
       threadId,
       onComplete: (text, toolCalls) => {
         const assistantMsg: ADKMessage = {
-          id: `assistant-${Date.now()}`,
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: text,
           createdAt: new Date().toISOString(),

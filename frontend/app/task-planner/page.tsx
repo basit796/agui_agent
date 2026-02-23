@@ -44,7 +44,7 @@ export default function TaskPlannerPage() {
     
     // Add the tool response as a user message
     const toolResponseMsg: ADKMessage = {
-      id: `tool-response-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: crypto.randomUUID(),
       role: 'user',
       content: response,
       createdAt: new Date().toISOString(),
@@ -93,7 +93,7 @@ export default function TaskPlannerPage() {
   const handleSubmit = useCallback((question: string) => {
     // Create user message with unique ID
     const userMsg: ADKMessage = {
-      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: crypto.randomUUID(),
       role: 'user',
       content: question,
       createdAt: new Date().toISOString(),
@@ -113,7 +113,7 @@ export default function TaskPlannerPage() {
       threadId,
       onComplete: (text, toolCalls) => {
         const assistantMsg: ADKMessage = {
-          id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: text,
           createdAt: new Date().toISOString(),

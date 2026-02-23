@@ -50,7 +50,7 @@ export function useADKStream() {
     initialState,
     onComplete 
   }: StartStreamOptions) => {
-    const newStreamingId = `streaming-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newStreamingId = crypto.randomUUID();
     setStreamingMessageId(newStreamingId);
     
     setIsStreaming(true);

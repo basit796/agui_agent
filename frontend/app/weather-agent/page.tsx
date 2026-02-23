@@ -41,7 +41,7 @@ export default function WeatherAgentPage() {
   const handleSubmit = useCallback((question: string) => {
     // Add user message immediately
     const userMsg: ADKMessage = {
-      id: `user-${Date.now()}`,
+      id: crypto.randomUUID(),
       role: 'user',
       content: question,
       createdAt: new Date().toISOString(),
@@ -63,7 +63,7 @@ export default function WeatherAgentPage() {
       onComplete: (text, toolCalls) => {
         // Add completed assistant message to persistent state
         const assistantMsg: ADKMessage = {
-          id: `assistant-${Date.now()}`,
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: text,
           createdAt: new Date().toISOString(),
