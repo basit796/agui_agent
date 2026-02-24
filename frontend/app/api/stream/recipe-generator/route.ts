@@ -1,11 +1,7 @@
 /**
- * SSE Streaming API Route for Recipe Generator (with state support)
+ * SSE Streaming API Route for Recipe Generator (with STATE_DELTA support)
  * 
- * This route:
- * 1. Receives POST request with question, conversation history, and current state
- * 2. Forwards to ADK backend at http://localhost:8000/shared-state-agent
- * 3. Translates ADK SSE events to frontend-compatible events
- * 4. Streams response back to client
+ * Handles real-time state updates via STATE_DELTA events
  */
 
 import { NextRequest } from 'next/server';
@@ -16,7 +12,6 @@ const AGENT_ENDPOINT = '/shared-state-agent';
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
   
-  // Parse request body
   const body = await request.json();
   const { question, conversationHistory = [], threadId, state = {} } = body;
 
@@ -34,7 +29,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Create readable stream for SSE
   const stream = new ReadableStream({
     async start(controller) {
       const sendEvent = (eventType: string, data: any) => {
@@ -45,7 +39,6 @@ export async function POST(request: NextRequest) {
       try {
         sendEvent('phase', { phase: 'understanding', label: 'Understanding your request...' });
 
-        // Build messages array for ADK agent
         const messages = [
           ...conversationHistory.map((msg: any, i: number) => ({
             id: `hist-${i}`,
@@ -59,14 +52,13 @@ export async function POST(request: NextRequest) {
           },
         ];
 
-        // Call ADK backend with state
         const response = await fetch(`${BACKEND_URL}${AGENT_ENDPOINT}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             threadId: threadId || `thread-${Date.now()}`,
             runId: `run-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-            state: state, // Pass the current state from frontend
+            state: state,
             messages,
             tools: [],
             context: [],
@@ -85,12 +77,10 @@ export async function POST(request: NextRequest) {
         const decoder = new TextDecoder();
         let buffer = '';
         
-        // Track pending tool calls
         const pendingToolCalls = new Map<string, { name: string; argsBuffer: string }>();
 
         sendEvent('phase', { phase: 'synthesizing', label: 'Generating response...' });
 
-        // Read ADK SSE stream
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -127,6 +117,24 @@ export async function POST(request: NextRequest) {
               case 'TEXT_MESSAGE_CONTENT':
                 if (event.delta) {
                   sendEvent('token', { text: event.delta });
+                }
+                break;
+
+              // NEW: Handle STATE_DELTA events for real-time state updates
+              case 'STATE_DELTA':
+                if (event.delta && Array.isArray(event.delta)) {
+                  sendEvent('state-delta', {
+                    delta: event.delta, // JSON Patch operations
+                  });
+                }
+                break;
+
+              // NEW: Handle STATE_SNAPSHOT events (full state)
+              case 'STATE_SNAPSHOT':
+                if (event.state) {
+                  sendEvent('state-snapshot', {
+                    state: event.state,
+                  });
                 }
                 break;
 

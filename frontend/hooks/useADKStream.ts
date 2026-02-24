@@ -1,6 +1,6 @@
 /**
- * Custom hook for managing SSE streaming from ADK agents - WITH STATE SUPPORT
- * Supports passing initial state to agents for shared state pattern
+ * Custom hook for managing SSE streaming from ADK agents
+ * WITH STATE_DELTA SUPPORT for real-time state updates
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -11,8 +11,10 @@ interface StartStreamOptions {
   agentEndpoint: string;
   conversationHistory?: ConversationHistoryMessage[];
   threadId?: string;
-  initialState?: any; // State to pass to agent
+  initialState?: any;
   onComplete?: (text: string, toolCalls: StreamToolCall[]) => void;
+  onStateDelta?: (delta: any[]) => void; // NEW: Real-time state updates
+  onStateSnapshot?: (state: any) => void; // NEW: Full state updates
 }
 
 export function useADKStream() {
@@ -27,6 +29,8 @@ export function useADKStream() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const onCompleteRef = useRef<((text: string, toolCalls: StreamToolCall[]) => void) | null>(null);
+  const onStateDeltaRef = useRef<((delta: any[]) => void) | null>(null);
+  const onStateSnapshotRef = useRef<((state: any) => void) | null>(null);
   
   const firstDoneReceivedRef = useRef(false);
 
@@ -48,7 +52,9 @@ export function useADKStream() {
     conversationHistory = [], 
     threadId, 
     initialState,
-    onComplete 
+    onComplete,
+    onStateDelta, // NEW
+    onStateSnapshot // NEW
   }: StartStreamOptions) => {
     const newStreamingId = crypto.randomUUID();
     setStreamingMessageId(newStreamingId);
@@ -62,6 +68,8 @@ export function useADKStream() {
     firstDoneReceivedRef.current = false;
 
     onCompleteRef.current = onComplete || null;
+    onStateDeltaRef.current = onStateDelta || null;
+    onStateSnapshotRef.current = onStateSnapshot || null;
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -74,7 +82,7 @@ export function useADKStream() {
           question,
           conversationHistory,
           threadId: threadId || `thread-${Date.now()}`,
-          state: initialState || {}, // Pass state to backend
+          state: initialState || {},
         }),
         signal: controller.signal,
       });
@@ -120,6 +128,20 @@ export function useADKStream() {
                   accumulatedText += data.text;
                   setStreamedText(accumulatedText);
                   setDisplayedText(accumulatedText);
+                  break;
+
+                // NEW: Handle real-time state updates
+                case 'state-delta':
+                  if (onStateDeltaRef.current && data.delta) {
+                    onStateDeltaRef.current(data.delta);
+                  }
+                  break;
+
+                // NEW: Handle full state snapshots
+                case 'state-snapshot':
+                  if (onStateSnapshotRef.current && data.state) {
+                    onStateSnapshotRef.current(data.state);
+                  }
                   break;
 
                 case 'tool-call':
